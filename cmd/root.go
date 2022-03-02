@@ -4,7 +4,12 @@ import (
 	"os"
 
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 )
+
+var conf struct {
+	Path string
+}
 
 var rootCmd = &cobra.Command{
 	Use:   "nextbox",
@@ -20,6 +25,25 @@ func Execute() {
 }
 
 func init() {
-	rootCmd.Flags().BoolP("verbose", "v", true, "versbose output")
-	rootCmd.Flags().BoolP("quiet", "q", false, "quiet output")
+	cobra.OnInitialize(initConfig)
+}
+
+func initConfig() {
+	dir := os.Getenv("XDG_DATA_HOME")
+	if len(dir) == 0 {
+		dir = os.Getenv("HOME")
+	}
+
+	full := dir + "/" + rootCmd.Name() + `.csv`
+
+	viper.AddConfigPath("$XDG_CONFIG_HOME")
+	viper.AddConfigPath("$HOME")
+
+	viper.SetConfigName(".nextbox")
+	viper.SetConfigType("toml")
+
+	viper.SetDefault("path", full)
+
+	viper.SafeWriteConfig()
+	viper.Unmarshal(&conf)
 }
