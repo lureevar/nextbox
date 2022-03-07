@@ -2,22 +2,21 @@ package todo
 
 import (
 	"encoding/csv"
-	"errors"
+	"fmt"
 	"os"
 	"strconv"
 )
 
 // Declaration of all errors that can happen in this package
-const (
-	TODO_ERR_COULDNT_OPEN           = `couldn't open the nextbox file`
-	TODO_ERR_COULDNT_WRITE          = `couldn't write your task to your nextbox file`
-	TODO_ERR_COULDNT_PARSE          = `couldn't parse the nextbox file`
-	TODO_ERR_TASK_DOESNT_EXIST      = `task doesn't exist`
-	TODO_ERR_COULDNT_PARSE_OR_WRITE = `couldn't parse and\or write to the nextbox file`
-	TODO_ERR_TASK_ALREADY_MARKED    = `task is already marked`
-	TODO_ERR_TASK_NOT_MARKED        = `task is not marked yet`
-	TODO_ERR_EMPTY                  = `nextbox is empty`
-	TODO_ERR_NO_TASKS_DONE          = `no tasks done in your nextbox`
+var (
+	ErrCouldntOpen     = fmt.Errorf(`couldn't open the nextbox file`)
+	ErrCouldntWrite    = fmt.Errorf(`couldn't write your task to your nextbox file`)
+	ErrCouldntParse    = fmt.Errorf(`couldn't parse the nextbox file`)
+	ErrTaskDoesntExist = fmt.Errorf(`task doesn't exist`)
+	ErrTaskMarked      = fmt.Errorf(`task is already marked`)
+	ErrTaskUnmarked    = fmt.Errorf(`task is not marked yet`)
+	ErrEmpty           = fmt.Errorf(`nextbox is empty`)
+	ErrNoTaskDone      = fmt.Errorf(`no tasks done in your nextbox`)
 )
 
 type todo struct {
@@ -31,7 +30,7 @@ func NewTodo(path string) *todo {
 func (td *todo) WriteNewTask(ta *task) error {
 	fh, err := os.OpenFile(td.path, os.O_CREATE|os.O_APPEND|os.O_WRONLY, os.ModePerm)
 	if err != nil {
-		return errors.New(TODO_ERR_COULDNT_OPEN)
+		return ErrCouldntOpen
 	}
 
 	defer fh.Close()
@@ -43,7 +42,7 @@ func (td *todo) WriteNewTask(ta *task) error {
 
 	err = writer.Write(task)
 	if err != nil {
-		return errors.New(TODO_ERR_COULDNT_WRITE)
+		return ErrCouldntWrite
 	}
 
 	defer writer.Flush()
@@ -54,7 +53,7 @@ func (td *todo) WriteNewTask(ta *task) error {
 func (td *todo) EraseExistingTask(taskNumber int) error {
 	fh, err := os.OpenFile(td.path, os.O_CREATE|os.O_RDWR, os.ModePerm)
 	if err != nil {
-		return errors.New(TODO_ERR_COULDNT_OPEN)
+		return ErrCouldntOpen
 	}
 
 	defer fh.Close()
@@ -64,11 +63,11 @@ func (td *todo) EraseExistingTask(taskNumber int) error {
 
 	oldTodo, err := reader.ReadAll()
 	if err != nil {
-		return errors.New(TODO_ERR_COULDNT_PARSE)
+		return ErrCouldntParse
 	}
 
 	if len(oldTodo) < taskNumber || taskNumber == 0 {
-		return errors.New(TODO_ERR_TASK_DOESNT_EXIST)
+		return ErrTaskDoesntExist
 	}
 
 	newTodo := make([][]string, 0)
@@ -84,10 +83,7 @@ func (td *todo) EraseExistingTask(taskNumber int) error {
 
 	fh.Truncate(0)
 
-	err = writer.WriteAll(newTodo)
-	if err != nil {
-		return errors.New(TODO_ERR_COULDNT_PARSE_OR_WRITE)
-	}
+	writer.WriteAll(newTodo)
 
 	return nil
 }
@@ -95,7 +91,7 @@ func (td *todo) EraseExistingTask(taskNumber int) error {
 func (td *todo) MarkTaskUndone(taskNumber int) error {
 	fh, err := os.OpenFile(td.path, os.O_CREATE|os.O_RDWR, os.ModePerm)
 	if err != nil {
-		return errors.New(TODO_ERR_COULDNT_OPEN)
+		return ErrCouldntOpen
 	}
 
 	defer fh.Close()
@@ -105,20 +101,20 @@ func (td *todo) MarkTaskUndone(taskNumber int) error {
 
 	todos, err := reader.ReadAll()
 	if err != nil {
-		return errors.New(TODO_ERR_COULDNT_PARSE)
+		return ErrCouldntParse
 	}
 
 	if len(todos) < taskNumber || taskNumber == 0 {
-		return errors.New(TODO_ERR_TASK_DOESNT_EXIST)
+		return ErrTaskDoesntExist
 	}
 
 	taskStatus, err := strconv.ParseBool(todos[taskNumber-1][1])
-	if err != nil {
-		return errors.New(TODO_ERR_COULDNT_PARSE)
+	if err != strconv.ErrSyntax {
+		return ErrCouldntParse
 	}
 
 	if taskStatus {
-		return errors.New(TODO_ERR_TASK_ALREADY_MARKED)
+		return ErrTaskMarked
 	}
 
 	todos[taskNumber-1][1] = strconv.FormatBool(true)
@@ -133,7 +129,7 @@ func (td *todo) MarkTaskUndone(taskNumber int) error {
 func (td *todo) UnmarkTaskDone(taskNumber int) error {
 	fh, err := os.OpenFile(td.path, os.O_CREATE|os.O_RDWR, os.ModePerm)
 	if err != nil {
-		return errors.New(TODO_ERR_COULDNT_OPEN)
+		return ErrCouldntOpen
 	}
 
 	defer fh.Close()
@@ -143,20 +139,20 @@ func (td *todo) UnmarkTaskDone(taskNumber int) error {
 
 	todos, err := reader.ReadAll()
 	if err != nil {
-		return errors.New(TODO_ERR_COULDNT_PARSE)
+		return ErrCouldntParse
 	}
 
 	if len(todos) < taskNumber || taskNumber == 0 {
-		return errors.New(TODO_ERR_TASK_DOESNT_EXIST)
+		return ErrTaskDoesntExist
 	}
 
 	taskStatus, err := strconv.ParseBool(todos[taskNumber-1][1])
-	if err != nil {
-		return errors.New(TODO_ERR_COULDNT_PARSE)
+	if err != strconv.ErrSyntax {
+		return ErrCouldntParse
 	}
 
 	if !taskStatus {
-		return errors.New(TODO_ERR_TASK_NOT_MARKED)
+		return ErrTaskUnmarked
 	}
 
 	todos[taskNumber-1][1] = strconv.FormatBool(false)
@@ -171,7 +167,7 @@ func (td *todo) UnmarkTaskDone(taskNumber int) error {
 func (td *todo) WipeTaskDone() error {
 	fh, err := os.OpenFile(td.path, os.O_CREATE|os.O_RDWR, os.ModePerm)
 	if err != nil {
-		return errors.New(TODO_ERR_COULDNT_OPEN)
+		return ErrCouldntOpen
 	}
 
 	defer fh.Close()
@@ -181,19 +177,19 @@ func (td *todo) WipeTaskDone() error {
 
 	oldTodo, err := reader.ReadAll()
 	if err != nil {
-		return errors.New(TODO_ERR_COULDNT_PARSE)
+		return ErrCouldntParse
 	}
 
 	if len(oldTodo) == 0 {
-		return errors.New(TODO_ERR_EMPTY)
+		return ErrEmpty
 	}
 
 	newTodo := make([][]string, 0)
 
 	for _, i := range oldTodo {
 		taskStatus, err := strconv.ParseBool(i[1])
-		if err != nil {
-			return errors.New(TODO_ERR_COULDNT_PARSE)
+		if err != strconv.ErrSyntax {
+			return ErrCouldntParse
 		}
 
 		if taskStatus {
@@ -204,7 +200,7 @@ func (td *todo) WipeTaskDone() error {
 	}
 
 	if len(newTodo) == len(oldTodo) {
-		return errors.New(TODO_ERR_NO_TASKS_DONE)
+		return ErrNoTaskDone
 	}
 
 	fh.Truncate(0)
@@ -214,10 +210,10 @@ func (td *todo) WipeTaskDone() error {
 	return nil
 }
 
-func (td *todo) GetTasks() ([][]string, error) {
+func (td *todo) Tasks() ([][]string, error) {
 	fh, err := os.OpenFile(td.path, os.O_CREATE|os.O_RDONLY, os.ModePerm)
 	if err != nil {
-		return nil, errors.New(TODO_ERR_COULDNT_OPEN)
+		return nil, ErrCouldntOpen
 	}
 
 	defer fh.Close()
@@ -226,7 +222,7 @@ func (td *todo) GetTasks() ([][]string, error) {
 
 	todo, err := reader.ReadAll()
 	if err != nil {
-		return nil, errors.New(TODO_ERR_COULDNT_PARSE)
+		return nil, ErrCouldntParse
 	}
 
 	return todo, nil

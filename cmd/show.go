@@ -22,7 +22,7 @@ var showCmd = &cobra.Command{
 func showRun(cmd *cobra.Command, args []string) {
 	td := todo.NewTodo(conf.Path)
 
-	todo, err := td.GetTasks()
+	todo, err := td.Tasks()
 	if err != nil {
 		log.Fatalf("error: %v\n", err)
 	}

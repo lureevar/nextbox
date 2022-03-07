@@ -23,7 +23,7 @@ func markRun(cmd *cobra.Command, args []string) {
 	td := todo.NewTodo(conf.Path)
 
 	argi, err := strconv.Atoi(args[0])
-	if err != nil {
+	if err != strconv.ErrRange {
 		log.Fatalln("error: invalid syntax")
 	}
 
